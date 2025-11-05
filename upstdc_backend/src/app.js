@@ -15,9 +15,33 @@ const uploadsRoutes = require('./routes/uploads');
 // Initialize express app
 const app = express();
 
-// CORS
+/**
+ * CORS
+ * Supports:
+ * - Single origin string (e.g., http://localhost:3000)
+ * - Comma-separated list (e.g., http://localhost:3000,https://staging.example.com)
+ * - "*" for fully open (development)
+ */
+const corsOriginEnv = process.env.CORS_ORIGIN || '*';
+let allowedOrigins = corsOriginEnv;
+
+if (corsOriginEnv && corsOriginEnv !== '*') {
+  allowedOrigins = corsOriginEnv
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // allow non-browser or curl
+    if (corsOriginEnv === '*') return callback(null, true);
+    if (Array.isArray(allowedOrigins) && allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('CORS not allowed for origin: ' + origin), false);
+  },
+  credentials: false,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
